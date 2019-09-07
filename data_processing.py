@@ -3,7 +3,6 @@
 """
 import networkx as nx
 import numpy as np
-import matplotlib.pylab as plt
 
 
 class Graph(object):
@@ -24,18 +23,33 @@ class Graph(object):
         """
         从一个给定格式的文件中构建一个图
         并从这个图中得到A/D
-        :param filename:
-        :return:
+        :param filename: 输入的图结构文件
+        :return:包含自身节点的邻接矩阵adj_hat, 从a_hat中得到的d_hat
         """
+        # 从文件中读取出一个图
         self.G = nx.read_edgelist(filename)
+        # 节点总个数
         self.node_size = self.G.number_of_nodes()
+        # 将节点按照值得大小排序，方便后续操作
         soreted_node_list = sorted(self.G.nodes(), key=lambda x: int(x))
+        # 邻接矩阵
         adj_matrix = nx.convert_matrix.to_numpy_array(self.G, nodelist=soreted_node_list)
         assert len(self.G.nodes()) == len(soreted_node_list), "转化的节点列表不一致"
-
-        return adj_matrix, soreted_node_list
+        # A_HAT矩阵，加上一个单位矩阵
+        adj_hat = adj_matrix + np.eye(adj_matrix.shape[0])
+        print(adj_hat)
+        # 生成矩阵D_HAT
+        d_hat = np.zeros_like(adj_matrix)
+        for node in self.G.nodes():
+            d_hat[int(node), int(node)] = int(self.G.degree[node]) + 1
+        return adj_hat, d_hat
 
     def read_node_label(self, label_file):
+        """
+        读取节点的标签，加入到节点属性中
+        :param label_file: 标签文件
+        :return: None
+        """
         assert self.G is not None, '必须先要构建一个图'
         fin = open(label_file, 'r', encoding='utf8')
         while 1:
@@ -46,8 +60,14 @@ class Graph(object):
             self.G.nodes[vec[0]]['label'] = vec[1:]
         fin.close()
         print(list(self.G.node(data=True)))
+        # todo：GCN训练是一个半监督学习，不需要整个的标签，只需要少量的标签。
 
     def read_node_features(self, filename):
+        """
+        读取节点的特征，特征使用one-hot编码
+        :param filename: 节点特征文件，格式如文件所述
+        :return: None
+        """
         assert self.G is not None, '必须先要构建一个图'
         fin = open(filename, 'r')
         for l in fin.readlines():
