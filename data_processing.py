@@ -3,7 +3,7 @@
 """
 import networkx as nx
 import numpy as np
-
+from scipy import sparse as sp
 
 class Graph(object):
     """
@@ -18,6 +18,8 @@ class Graph(object):
         """
         self.G = None
         self.node_size = 0
+        self.a_hat = None
+        self.x = None
 
     def read_from_file(self, filename):
         """
@@ -37,12 +39,16 @@ class Graph(object):
         assert len(self.G.nodes()) == len(soreted_node_list), "转化的节点列表不一致"
         # A_HAT矩阵，加上一个单位矩阵
         adj_hat = adj_matrix + np.eye(adj_matrix.shape[0])
-        print(adj_hat)
+        # print(adj_hat)
         # 生成矩阵D_HAT
         d_hat = np.zeros_like(adj_matrix)
         for node in self.G.nodes():
             d_hat[int(node), int(node)] = int(self.G.degree[node]) + 1
-        return adj_hat, d_hat
+        # 计算D_{-1/2} * A * D_{-1/2}
+        d = np.power(d_hat, -0.5)
+        d[np.isinf(d)] = 0.
+        self.a_hat = d.dot(adj_hat).dot(d)
+        # return adj_hat, d_hat
 
     def read_node_label(self, label_file):
         """
@@ -52,15 +58,23 @@ class Graph(object):
         """
         assert self.G is not None, '必须先要构建一个图'
         fin = open(label_file, 'r', encoding='utf8')
+        label_set = set()
         while 1:
             l = fin.readline()
             if l == '':
                 break
             vec = l.split()
             self.G.nodes[vec[0]]['label'] = vec[1:]
+            label_set.add(vec[1:][0])
         fin.close()
-        print(list(self.G.node(data=True)))
+        # print(len(label_set))
+        # print(list(self.G.node(data=True)))
         # todo：GCN训练是一个半监督学习，不需要整个的标签，只需要少量的标签。
+        all_label = []
+        for i, j in self.G.node(data=True):
+            all_label.append((int(i), int(j['label'][0])))
+        all_label.sort(key=lambda x: x[0])
+        return label_set, all_label
 
     def read_node_features(self, filename):
         """
@@ -70,12 +84,17 @@ class Graph(object):
         """
         assert self.G is not None, '必须先要构建一个图'
         fin = open(filename, 'r')
+        feature_list = []
         for l in fin.readlines():
             vec = l.split()
             self.G.nodes[vec[0]]['feature'] = np.array(
                 [float(x) for x in vec[1:]])
+            feature_list.append([float(x) for x in vec[1:]])
         fin.close()
-        print(list(self.G.node(data=True)))
+        # print(list(self.G.node(data=True)))
+        f = np.array(feature_list)
+        # print(f.shape)
+        self.x = f
 
 
 if __name__ == '__main__':
