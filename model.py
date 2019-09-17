@@ -12,8 +12,8 @@ class Model(nn.Module):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.layers = nn.Sequential(
-            Layer(self.input_dim, 256, a_hat, is_sparse=True),
-            Layer(256, output_dim, a_hat, is_sparse=False)
+            Layer(self.input_dim, 512, a_hat, is_sparse=True),
+            Layer(512, output_dim, a_hat, is_sparse=False)
         )
         self.fc = nn.Linear(output_dim, num_class_label)
         self.dropout = nn.Dropout(0.5)

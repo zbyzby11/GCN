@@ -52,5 +52,5 @@ class NodeClassification(object):
 
 
 if __name__ == '__main__':
-    nc = NodeClassification(300, 0.01)
+    nc = NodeClassification(500, 0.01)
     nc.train()
